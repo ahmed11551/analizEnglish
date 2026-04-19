@@ -13,7 +13,7 @@ Set-Location $Root
 $envFile = Join-Path $Root ".env"
 if (-not (Test-Path $envFile)) {
     Copy-Item (Join-Path $Root ".env.example") $envFile -Force
-    Write-Host 'Created .env — add BOT_TOKEN from BotFather, save, run again.' -ForegroundColor Yellow
+    Write-Host 'Created .env - add BOT_TOKEN from BotFather, save, run again.' -ForegroundColor Yellow
     exit 1
 }
 
@@ -42,10 +42,15 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-& $venvPy (Join-Path $Root "check_telegram.py")
-if ($LASTEXITCODE -ne 0) {
-    Write-Host 'Fix network/VPN or set TELEGRAM_PROXY in .env — see README (Troubleshooting).' -ForegroundColor Yellow
-    exit 1
+$envRaw = Get-Content -LiteralPath $envFile -Raw -ErrorAction SilentlyContinue
+if ($envRaw -match '(?m)^SKIP_TELEGRAM_CHECK=1\s*$') {
+    Write-Host 'SKIP_TELEGRAM_CHECK=1 - skipping connectivity test.' -ForegroundColor Yellow
+} else {
+    & $venvPy (Join-Path $Root "check_telegram.py")
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host 'Fix network/VPN or set TELEGRAM_PROXY in .env - see README (Troubleshooting).' -ForegroundColor Yellow
+        exit 1
+    }
 }
 
 Write-Host "Starting bot... Keep window open. Stop: Ctrl+C" -ForegroundColor Green
