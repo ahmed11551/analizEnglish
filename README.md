@@ -43,8 +43,13 @@ python bot.py
 | `BRAND_SUBTITLE` | нет | Подзаголовок |
 | `LOG_LEVEL` | нет | `INFO` (по умолчанию), `DEBUG` и т.д. |
 
+## Деплой на сервер (Beget VPS и др.)
+
+Пошагово: **[deploy/BEGET.md](deploy/BEGET.md)** (VPS, systemd, обновления). Обычный shared-хостинг без VPS для этого бота не подходит.
+
 ## Структура
 
 - `bot.py` — логика Telegram
 - `questions_data.py` — вопросы, ключи, тексты уровней
 - `config.py` — загрузка `.env`
+- `deploy/` — инструкции и пример unit для Linux

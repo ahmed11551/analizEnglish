@@ -1,0 +1,21 @@
+# Пример для systemd на Linux (Beget VPS и др.).
+# Скопируй: sudo cp english-test-bot.service.example /etc/systemd/system/english-test-bot.service
+# Поправь User, Group, WorkingDirectory, ExecStart под свои пути.
+# Затем: sudo systemctl daemon-reload && sudo systemctl enable --now english-test-bot
+
+[Unit]
+Description=Telegram English grammar test bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=botuser
+Group=botuser
+WorkingDirectory=/home/botuser/app/analizEnglish
+ExecStart=/home/botuser/app/analizEnglish/.venv/bin/python bot.py
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
