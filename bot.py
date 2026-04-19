@@ -23,7 +23,7 @@ from telegram.ext import (
     filters,
 )
 
-from config import BOT_TOKEN, BRAND_SUBTITLE, BRAND_TITLE, LOG_LEVEL
+from config import BOT_TOKEN, BRAND_SUBTITLE, BRAND_TITLE, LOG_LEVEL, TELEGRAM_PROXY
 from intro_validate import validate_intro_answer
 from leads import append_lead, build_lead_record
 from questions_data import (
@@ -426,12 +426,16 @@ def main() -> None:
         logger.error("Не задан BOT_TOKEN. Создай файл .env по образцу .env.example.")
         sys.exit(1)
 
-    request = HTTPXRequest(
-        connect_timeout=30.0,
-        read_timeout=30.0,
-        write_timeout=30.0,
-        pool_timeout=10.0,
-    )
+    req_kw: dict[str, Any] = {
+        "connect_timeout": 45.0,
+        "read_timeout": 45.0,
+        "write_timeout": 45.0,
+        "pool_timeout": 15.0,
+    }
+    if TELEGRAM_PROXY:
+        req_kw["proxy"] = TELEGRAM_PROXY
+        logger.info("Используется TELEGRAM_PROXY для запросов к Telegram API")
+    request = HTTPXRequest(**req_kw)
     app = (
         Application.builder()
         .token(BOT_TOKEN)
@@ -447,10 +451,11 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(on_quiz_answer, pattern=r"^q:\d+:[abc]$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
 
-    logger.info("Polling…")
+    logger.info("Polling… (при обрыве сети бот будет повторять подключение)")
     app.run_polling(
         allowed_updates=Update.ALL_TYPES,
         drop_pending_updates=True,
+        bootstrap_retries=-1,
     )
 
 

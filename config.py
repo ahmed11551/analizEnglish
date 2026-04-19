@@ -33,3 +33,8 @@ LOG_LEVEL = _env("LOG_LEVEL", "INFO").upper()
 # Куда писать лиды (JSON Lines). Каталог создаётся автоматически.
 _leads_override = _env("LEADS_FILE")
 LEADS_PATH = Path(_leads_override) if _leads_override else _ROOT / "data" / "leads.jsonl"
+
+# HTTP(S) или SOCKS5 прокси для запросов к Telegram (если прямой доступ режется).
+# Примеры: http://127.0.0.1:7890  socks5://127.0.0.1:1080
+# Для socks5: pip install "python-telegram-bot[socks]"
+TELEGRAM_PROXY = _env("TELEGRAM_PROXY")

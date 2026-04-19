@@ -42,5 +42,11 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+& $venvPy (Join-Path $Root "check_telegram.py")
+if ($LASTEXITCODE -ne 0) {
+    Write-Host 'Fix network/VPN or set TELEGRAM_PROXY in .env — see README (Troubleshooting).' -ForegroundColor Yellow
+    exit 1
+}
+
 Write-Host "Starting bot... Keep window open. Stop: Ctrl+C" -ForegroundColor Green
 & $venvPy (Join-Path $Root "bot.py")
