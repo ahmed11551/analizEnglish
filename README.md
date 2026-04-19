@@ -66,4 +66,5 @@
 - `check_telegram.py` — проверка доступа до `api.telegram.org`
 - `api/webhook/index.py` — endpoint для Vercel (Telegram webhook, URL `/api/webhook`)
 - `set_webhook.py` — регистрация webhook у Telegram
+- `get_webhook_info.py` — диагностика: URL webhook и `last_error_message` у Telegram
 - `deploy/` — VPS, Vercel

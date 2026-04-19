@@ -55,6 +55,13 @@ python set_webhook.py
 
 Проверка: открой в браузере `https://ТВОЙ-ПРОЕКТ.vercel.app/api/webhook` — должен быть текст **OK: English test bot webhook...**
 
+### 3.1. Если бот в Telegram «молчит»
+
+1. **Точный URL** возьми в Vercel → **Deployments** → открой последний успешный деплой → домен (Production). Именно его, с суффиксом `/api/webhook`, указывай в `WEBHOOK_URL` и в `setWebhook`.
+2. **`WEBHOOK_SECRET`**: значение в панели Vercel и в `secret_token` при `setWebhook` должны **совпадать побайтово**. Если в Vercel задан секрет, а webhook регистрировали без `secret_token` — Telegram не шлёт заголовок `X-Telegram-Bot-Api-Secret-Token`, и функция ответит **403** (бот не получит апдейт).
+3. На ПК с доступом к Telegram API: `python get_webhook_info.py` — смотри поле **`url`**, **`last_error_message`** (часто там SSL/404/таймаут до Vercel) и **`pending_update_count`**.
+4. Убедись, что задеплоен **последний `main`** с GitHub (исправлены `vercel.json` и путь `api/webhook/index.py`).
+
 ### 4. Снять webhook (вернуться на polling локально)
 
 ```bash

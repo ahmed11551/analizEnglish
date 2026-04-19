@@ -56,6 +56,16 @@ def main() -> None:
     if secret:
         print("Секрет включён — в Vercel должен быть тот же WEBHOOK_SECRET.")
 
+    info_url = f"https://api.telegram.org/bot{BOT_TOKEN}/getWebhookInfo"
+    try:
+        raw2 = urllib.request.urlopen(info_url, timeout=30).read()
+        info_out = json.loads(raw2.decode("utf-8"))
+        if info_out.get("ok"):
+            print("\ngetWebhookInfo:")
+            print(json.dumps(info_out.get("result"), ensure_ascii=False, indent=2))
+    except Exception as e:
+        print("(getWebhookInfo не удалось:", e, ")", file=sys.stderr)
+
 
 if __name__ == "__main__":
     main()

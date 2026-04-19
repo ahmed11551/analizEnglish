@@ -122,16 +122,20 @@ def split_telegram_chunks(text: str, max_len: int = TELEGRAM_TEXT_LIMIT) -> list
 
 
 async def post_init(application: Application) -> None:
-    await application.bot.set_my_commands(
-        [
-            BotCommand("start", "Начать тест"),
-            BotCommand("help", "Справка и команды"),
-            BotCommand("cancel", "Прервать тест"),
-            BotCommand("skip", "Пропустить шаг с контактом"),
-        ]
-    )
-    me = await application.bot.get_me()
-    logger.info("Бот @%s запущен (id=%s)", me.username, me.id)
+    # На Vercel каждый POST поднимает новый процесс — сбой здесь давал бы 500 всему webhook.
+    try:
+        await application.bot.set_my_commands(
+            [
+                BotCommand("start", "Начать тест"),
+                BotCommand("help", "Справка и команды"),
+                BotCommand("cancel", "Прервать тест"),
+                BotCommand("skip", "Пропустить шаг с контактом"),
+            ]
+        )
+        me = await application.bot.get_me()
+        logger.info("Бот @%s запущен (id=%s)", me.username, me.id)
+    except Exception:
+        logger.exception("post_init: не удалось set_my_commands/get_me (продолжаем обработку)")
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
