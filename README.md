@@ -1,6 +1,6 @@
 # Тест английского · Grammar Check (Telegram-бот)
 
-Бот проводит анкету, тест из 21 вопроса с темами, выставляет уровень (Pre-A1 … B2+) и список тем для повторения по ошибкам.
+Бот сразу запускает тест из 21 грамматического вопроса, выставляет уровень (Pre-A1 … B2+), показывает темы с ошибками и даёт список тем для повторения.
 
 ## Безопасность
 
@@ -42,6 +42,8 @@ docker compose up --build
 | `LOG_LEVEL` | нет | `INFO` (по умолчанию), `DEBUG` и т.д. |
 | `LEADS_FILE` | нет | Путь к файлу лидов; по умолчанию `data/leads.jsonl` |
 | `TELEGRAM_PROXY` | нет | Прокси для Bot API, например `http://127.0.0.1:7890` или `socks5://127.0.0.1:1080` |
+| `WEBSITE_URL` | нет | Ссылка кнопки CTA «Перейти на сайт» (по умолчанию `https://desharschool.ru`) |
+| `MINI_APP_URL` | нет | Публичный HTTPS URL Telegram Mini App (для кнопки «Открыть мини-приложение») |
 
 После теста контакты и отказ от контакта (`/skip`) дописываются в **`data/leads.jsonl`** (каталог в `.gitignore`). На сервере делай бэкап и ограничивай доступ к файлу.
 
@@ -63,8 +65,26 @@ docker compose up --build
 
 - `bot.py` — логика Telegram
 - `questions_data.py` — вопросы, ключи, тексты уровней
+- `miniapp/` — web/mobile mini app с тем же тестом и финальным разбором
 - `config.py` — загрузка `.env`
-- `intro_validate.py` — проверка ответов анкеты
 - `leads.py` — запись лидов в JSON Lines
 - `check_telegram.py` — проверка доступа до `api.telegram.org`
 - `deploy/` — инструкции для VPS
+
+## Mini App (web/mobile)
+
+В репозитории добавлена версия теста для браузера: `miniapp/`.
+
+Локальный запуск:
+
+```bash
+python3 -m http.server 8080
+```
+
+Открой `http://localhost:8080/miniapp/`.
+
+Для Telegram Mini App размести `miniapp/` на публичном HTTPS-домене и укажи адрес в `.env`:
+
+```bash
+MINI_APP_URL=https://your-domain.example/miniapp/
+```

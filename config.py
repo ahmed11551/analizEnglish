@@ -38,3 +38,7 @@ LEADS_PATH = Path(_leads_override) if _leads_override else _ROOT / "data" / "lea
 # Примеры: http://127.0.0.1:7890  socks5://127.0.0.1:1080
 # Для socks5: pip install "python-telegram-bot[socks]"
 TELEGRAM_PROXY = _env("TELEGRAM_PROXY")
+
+# Публичные ссылки для CTA и mini app.
+WEBSITE_URL = _env("WEBSITE_URL", "https://desharschool.ru")
+MINI_APP_URL = _env("MINI_APP_URL", "")
