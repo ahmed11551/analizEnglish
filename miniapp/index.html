@@ -7,13 +7,94 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <main class="app">
-    <header class="card">
-      <h1 id="page-title">Тест английского · Grammar Check</h1>
-      <p id="page-subtitle">Пройди тест и получи разбор ошибок по темам.</p>
+  <div class="bg-orb orb-1" aria-hidden="true"></div>
+  <div class="bg-orb orb-2" aria-hidden="true"></div>
+
+  <main class="app-shell">
+    <header class="hero glass">
+      <p class="hero-eyebrow">Grammar Check • 2026</p>
+      <h1 id="hero-title">Интерактивный тест по грамматике английского</h1>
+      <p id="hero-subtitle">21 вопрос, персональный разбор ошибок и рекомендации по темам.</p>
+      <div class="hero-tags">
+        <span>Web</span>
+        <span>Mobile</span>
+        <span>Mini App Ready</span>
+      </div>
     </header>
-    <section id="app" class="view"></section>
+
+    <section id="app-root" class="stage glass"></section>
   </main>
+
+  <template id="start-template">
+    <section class="start-grid">
+      <article class="start-card panel">
+        <h2>Проверь свой уровень за 3–5 минут</h2>
+        <p>
+          Ты получишь итог по уровню, список тем с ошибками и приоритетные темы для повторения.
+        </p>
+        <ul class="feature-list">
+          <li>21 грамматический вопрос</li>
+          <li>Мгновенный разбор результатов</li>
+          <li>Подходит для телефона и компьютера</li>
+        </ul>
+      </article>
+      <article class="start-card panel highlight">
+        <p class="metric-label">Формат</p>
+        <p class="metric-value">A1 → B2+</p>
+        <p class="metric-label">Рекомендации</p>
+        <p class="metric-value">по темам ошибок</p>
+        <button id="start-btn" class="btn btn-primary" type="button">Начать тест</button>
+      </article>
+    </section>
+  </template>
+
+  <template id="question-template">
+    <section class="quiz-wrap">
+      <div class="quiz-top">
+        <p class="quiz-step" id="progress-text"></p>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+      <h2 class="question-text" id="question-text"></h2>
+      <div class="options" id="options"></div>
+    </section>
+  </template>
+
+  <template id="result-template">
+    <section class="result-wrap">
+      <div class="result-top">
+        <div class="result-main panel">
+          <p class="result-caption">Твой результат</p>
+          <h2 id="score-line"></h2>
+          <p id="level-line" class="level-line"></p>
+          <p id="level-text" class="level-text"></p>
+        </div>
+      </div>
+
+      <div class="result-grid">
+        <article class="panel">
+          <h3>Темы с ошибками</h3>
+          <ul id="mistakes-list" class="topic-list"></ul>
+        </article>
+        <article class="panel">
+          <h3>Темы для повторения</h3>
+          <ul id="review-list" class="topic-list"></ul>
+        </article>
+      </div>
+
+      <article class="panel cta-panel">
+        <p id="cta-text"></p>
+        <div class="cta-actions">
+          <a class="btn btn-primary" id="site-link" href="#" target="_blank" rel="noopener noreferrer">
+            Перейти на сайт
+          </a>
+          <button id="restart-btn" class="btn btn-ghost" type="button">Пройти заново</button>
+        </div>
+      </article>
+    </section>
+  </template>
+
   <script src="./app.js" defer></script>
 </body>
 </html>

@@ -168,11 +168,17 @@ const LEVEL_TEXTS = {
 };
 
 const WEBSITE_URL = "https://desharschool.ru";
+const CTA_TEXT =
+  "Если ты хочешь повысить свой уровень и научиться говорить по-английски. " +
+  "Я могу в этом помочь. Переходи на сайт и оставь заявку. Первый урок бесплатный.";
 const appRoot = document.getElementById("quiz-card");
+const heroTitle = document.getElementById("hero-title");
+const heroSubtitle = document.getElementById("hero-subtitle");
 const questionTemplate = document.getElementById("question-template");
 const resultTemplate = document.getElementById("result-template");
 
 const state = {
+  stage: "start",
   qIndex: 0,
   answers: [],
 };
@@ -194,20 +200,66 @@ function answerQuestion(choice) {
 }
 
 function resetQuiz() {
+  state.stage = "start";
   state.qIndex = 0;
   state.answers = [];
-  renderQuiz();
+  renderStart();
+}
+
+function getStageTone(level) {
+  if (level === "B2+" || level === "B2") {
+    return "Отличная база! Продолжай усиливать живой разговорный английский.";
+  }
+  if (level === "B1" || level === "A2") {
+    return "Хороший потенциал. Несколько тем дадут заметный скачок в речи.";
+  }
+  return "База уже строится. Сфокусируйся на ключевых темах и прогресс пойдёт быстро.";
+}
+
+function renderStart() {
+  state.stage = "start";
+  heroTitle.textContent = "Тест уровня английской грамматики";
+  heroSubtitle.textContent =
+    "Современный mini app формат: быстрый старт, понятный результат и чёткий план повторения.";
+
+  appRoot.innerHTML = `
+    <section class="card start-card">
+      <span class="tagline">Blue Edition · 2026</span>
+      <h2>Готов проверить свой текущий уровень?</h2>
+      <p class="description">
+        Тест состоит из 21 вопроса. В конце ты получишь:
+      </p>
+      <ul class="feature-list">
+        <li>текущий уровень по шкале теста;</li>
+        <li>темы, где были ошибки;</li>
+        <li>конкретный список тем для повторения;</li>
+        <li>доступ к сайту для записи на бесплатный первый урок.</li>
+      </ul>
+      <button id="start-btn" class="primary-btn" type="button">Начать тест</button>
+    </section>
+  `;
+  document.getElementById("start-btn").addEventListener("click", () => {
+    state.stage = "quiz";
+    renderQuiz();
+  });
 }
 
 function renderResult() {
   const node = resultTemplate.content.cloneNode(true);
   const score = state.answers.filter((a) => a.isCorrect).length;
   const level = scoreToLevel(score);
+  const stageTone = getStageTone(level);
   const wrongTopics = [...new Set(state.answers.filter((a) => !a.isCorrect).map((a) => a.topic))];
+
+  heroTitle.textContent = "Твой персональный результат";
+  heroSubtitle.textContent =
+    "Сохрани фокус на темах ниже — это даст максимальный рост за короткий срок.";
 
   node.getElementById("score-line").textContent = `Правильных ответов: ${score} из ${QUESTIONS.length}`;
   node.getElementById("level-line").textContent = `Твой уровень: ${level}`;
   node.getElementById("level-text").textContent = LEVEL_TEXTS[level];
+  node.getElementById("tone-line").textContent = stageTone;
+  node.getElementById("cta-text").textContent = CTA_TEXT;
 
   const mistakesList = node.getElementById("mistakes-list");
   const reviewList = node.getElementById("review-list");
@@ -235,6 +287,7 @@ function renderResult() {
 
 function renderQuiz() {
   if (state.qIndex >= QUESTIONS.length) {
+    state.stage = "result";
     renderResult();
     return;
   }
@@ -242,6 +295,9 @@ function renderQuiz() {
   const q = QUESTIONS[state.qIndex];
   const node = questionTemplate.content.cloneNode(true);
   const progressPercent = ((state.qIndex + 1) / QUESTIONS.length) * 100;
+
+  heroTitle.textContent = "Прохождение теста";
+  heroSubtitle.textContent = "Выбирай один вариант ответа. Тема вопроса скрыта до финального разбора.";
 
   node.getElementById("progress-fill").style.width = `${progressPercent}%`;
   node.getElementById("progress-text").textContent = `Вопрос ${state.qIndex + 1} из ${QUESTIONS.length}`;
@@ -251,7 +307,7 @@ function renderQuiz() {
   for (const key of ["a", "b", "c"]) {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "option-btn";
+    btn.className = "option";
     btn.textContent = `${key}) ${q.options[key]}`;
     btn.addEventListener("click", () => {
       answerQuestion(key);
@@ -263,4 +319,4 @@ function renderQuiz() {
   appRoot.replaceChildren(node);
 }
 
-renderQuiz();
+renderStart();
