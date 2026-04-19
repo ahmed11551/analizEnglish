@@ -54,7 +54,7 @@
 
 ## Деплой на Vercel (webhook)
 
-**[deploy/VERCEL.md](deploy/VERCEL.md)** — переменные окружения, `set_webhook.py`, ограничения serverless. Для стабильной работы теста без сбоев сессии предпочтительнее VPS.
+**[deploy/VERCEL.md](deploy/VERCEL.md)** — переменные окружения, `set_webhook.py`, ограничения serverless. Для стабильной работы теста без сбоев сессии предпочтительнее VPS. Шаблон переменных для панели Vercel: **[deploy/env.vercel.template](deploy/env.vercel.template)**; локальный `.env` — из **`.env.example`**.
 
 ## Структура
 

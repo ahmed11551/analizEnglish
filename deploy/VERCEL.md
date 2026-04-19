@@ -18,7 +18,7 @@
 
 1. Зайди на [vercel.com](https://vercel.com) → **Add New** → **Project** → импорт репозитория.
 2. **Framework Preset**: Other (или автоматически определит Python).
-3. **Environment Variables** (Production):
+3. **Environment Variables** (Production): список ключей и заготовки значений — в репозитории **[env.vercel.template](env.vercel.template)** (скопируй как `deploy/env.vercel.local`, заполни, перенеси в панель; `env.vercel.local` в git не попадёт).
 
 | Переменная | Обязательно | Пример / комментарий |
 |------------|-------------|----------------------|
