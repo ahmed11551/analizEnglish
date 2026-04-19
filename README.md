@@ -18,21 +18,9 @@
 
 ## Запуск вручную
 
-```bash
-cd analiz
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-copy .env.example .env
-```
+Создай `.venv`, `pip install -r requirements.txt`, заполни `.env`, затем `python bot.py` из корня проекта.
 
-В `.env` укажи `BOT_TOKEN` (и при желании `BRAND_TITLE`, `BRAND_SUBTITLE`).
-
-```bash
-python bot.py
-```
-
-Команды меню (`/start`, `/help`, `/cancel`, `/skip`) подставляются при старте бота автоматически.
+Команды меню в Telegram задаются при старте бота автоматически.
 
 ## Переменные окружения
 
@@ -43,9 +31,9 @@ python bot.py
 | `BRAND_SUBTITLE` | нет | Подзаголовок |
 | `LOG_LEVEL` | нет | `INFO` (по умолчанию), `DEBUG` и т.д. |
 
-## Деплой на сервер (Beget VPS и др.)
+## Деплой на VPS
 
-Пошагово: **[deploy/BEGET.md](deploy/BEGET.md)** (VPS, systemd, обновления). Обычный shared-хостинг без VPS для этого бота не подходит.
+**[deploy/VPS.md](deploy/VPS.md)** — SSH, venv, systemd, обновления. Shared-хостинг без VPS не подходит.
 
 ## Структура
 

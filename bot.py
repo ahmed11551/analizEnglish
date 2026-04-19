@@ -235,17 +235,22 @@ async def on_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return
 
-    await query.answer()
-
     m = re.match(r"^q:(\d+):([abc])$", query.data)
     if not m:
+        await query.answer()
         return
+
     qid = int(m.group(1))
     chosen = m.group(2)
     q = QUESTIONS[ud.get("q_index", 0)]
     if q["id"] != qid:
-        await query.answer("Это устаревший вопрос. Нажми /start.", show_alert=True)
+        await query.answer(
+            "Это не текущий вопрос. Нажми /start.",
+            show_alert=True,
+        )
         return
+
+    await query.answer()
 
     is_correct = chosen == q["correct"]
     ud.setdefault("answers", []).append(
@@ -332,6 +337,10 @@ async def skip_lead(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if ud.get("phase") == "lead":
         ud["phase"] = "done"
         await update.effective_message.reply_text("Хорошо, без контакта.")
+    else:
+        await update.effective_message.reply_text(
+            "/skip доступна после результатов, когда бот просит оставить контакт."
+        )
 
 
 def main() -> None:
@@ -361,7 +370,10 @@ def main() -> None:
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
 
     logger.info("Polling…")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    app.run_polling(
+        allowed_updates=Update.ALL_TYPES,
+        drop_pending_updates=True,
+    )
 
 
 if __name__ == "__main__":

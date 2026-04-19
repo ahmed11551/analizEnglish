@@ -1,4 +1,4 @@
-# Пример для systemd на Linux (Beget VPS и др.).
+# Пример unit для systemd на Linux VPS.
 # Скопируй: sudo cp english-test-bot.service.example /etc/systemd/system/english-test-bot.service
 # Поправь User, Group, WorkingDirectory, ExecStart под свои пути.
 # Затем: sudo systemctl daemon-reload && sudo systemctl enable --now english-test-bot
