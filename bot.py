@@ -11,6 +11,7 @@ import sys
 from typing import Any
 
 from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.request import HTTPXRequest
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -338,9 +339,16 @@ def main() -> None:
         logger.error("Не задан BOT_TOKEN. Создай файл .env по образцу .env.example.")
         sys.exit(1)
 
+    request = HTTPXRequest(
+        connect_timeout=30.0,
+        read_timeout=30.0,
+        write_timeout=30.0,
+        pool_timeout=10.0,
+    )
     app = (
         Application.builder()
         .token(BOT_TOKEN)
+        .request(request)
         .post_init(post_init)
         .build()
     )

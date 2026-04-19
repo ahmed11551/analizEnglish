@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+# Явный путь к .env рядом с проектом (не зависит от текущей папки в консоли)
+_ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=_ENV_PATH)
 
 
 def _env(name: str, default: str = "") -> str:
