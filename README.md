@@ -32,9 +32,6 @@
 | `LOG_LEVEL` | нет | `INFO` (по умолчанию), `DEBUG` и т.д. |
 | `LEADS_FILE` | нет | Путь к файлу лидов; по умолчанию `data/leads.jsonl` |
 | `TELEGRAM_PROXY` | нет | Прокси для Bot API, например `http://127.0.0.1:7890` или `socks5://127.0.0.1:1080` |
-| `WEBHOOK_URL` | нет | Только для `set_webhook.py` (полный URL `/api/webhook` на Vercel) |
-| `WEBHOOK_SECRET` | нет | Общий секрет Vercel + `setWebhook`; проверяется в `api/webhook.py` |
-| `PERSISTENCE_PATH` | нет | Для Vercel: `/tmp/ptb.pkl` (см. VERCEL.md) |
 
 После теста контакты и отказ от контакта (`/skip`) дописываются в **`data/leads.jsonl`** (каталог в `.gitignore`). На сервере делай бэкап и ограничивай доступ к файлу.
 
@@ -52,10 +49,6 @@
 
 **[deploy/VPS.md](deploy/VPS.md)** — SSH, venv, systemd, обновления. Shared-хостинг без VPS не подходит.
 
-## Деплой на Vercel (webhook)
-
-**[deploy/VERCEL.md](deploy/VERCEL.md)** — переменные окружения, `set_webhook.py`, ограничения serverless. Для стабильной работы теста без сбоев сессии предпочтительнее VPS. Шаблон переменных для панели Vercel: **[deploy/env.vercel.template](deploy/env.vercel.template)**; локальный `.env` — из **`.env.example`**.
-
 ## Структура
 
 - `bot.py` — логика Telegram
@@ -64,7 +57,4 @@
 - `intro_validate.py` — проверка ответов анкеты
 - `leads.py` — запись лидов в JSON Lines
 - `check_telegram.py` — проверка доступа до `api.telegram.org`
-- `api/webhook.py` — endpoint для Vercel (Telegram webhook, URL `/api/webhook`)
-- `set_webhook.py` — регистрация webhook у Telegram
-- `get_webhook_info.py` — диагностика: URL webhook и `last_error_message` у Telegram
-- `deploy/` — VPS, Vercel
+- `deploy/` — инструкции для VPS

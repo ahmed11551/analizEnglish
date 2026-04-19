@@ -20,8 +20,6 @@ from telegram.ext import (
     CommandHandler,
     ContextTypes,
     MessageHandler,
-    PersistenceInput,
-    PicklePersistence,
     filters,
 )
 
@@ -30,7 +28,6 @@ from config import (
     BRAND_SUBTITLE,
     BRAND_TITLE,
     LOG_LEVEL,
-    PERSISTENCE_PATH,
     TELEGRAM_PROXY,
 )
 from intro_validate import validate_intro_answer
@@ -122,20 +119,16 @@ def split_telegram_chunks(text: str, max_len: int = TELEGRAM_TEXT_LIMIT) -> list
 
 
 async def post_init(application: Application) -> None:
-    # На Vercel каждый POST поднимает новый процесс — сбой здесь давал бы 500 всему webhook.
-    try:
-        await application.bot.set_my_commands(
-            [
-                BotCommand("start", "Начать тест"),
-                BotCommand("help", "Справка и команды"),
-                BotCommand("cancel", "Прервать тест"),
-                BotCommand("skip", "Пропустить шаг с контактом"),
-            ]
-        )
-        me = await application.bot.get_me()
-        logger.info("Бот @%s запущен (id=%s)", me.username, me.id)
-    except Exception:
-        logger.exception("post_init: не удалось set_my_commands/get_me (продолжаем обработку)")
+    await application.bot.set_my_commands(
+        [
+            BotCommand("start", "Начать тест"),
+            BotCommand("help", "Справка и команды"),
+            BotCommand("cancel", "Прервать тест"),
+            BotCommand("skip", "Пропустить шаг с контактом"),
+        ]
+    )
+    me = await application.bot.get_me()
+    logger.info("Бот @%s запущен (id=%s)", me.username, me.id)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -435,11 +428,9 @@ async def skip_lead(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 def create_application() -> Application:
-    """Сборка Application для polling (локально) и для webhook (Vercel)."""
+    """Сборка Application для polling (локально или на VPS)."""
     if not BOT_TOKEN:
-        raise RuntimeError(
-            "Не задан BOT_TOKEN. Для локального запуска создай .env; для Vercel задай переменную в панели."
-        )
+        raise RuntimeError("Не задан BOT_TOKEN. Создай `.env` в корне проекта (см. `.env.example`).")
 
     req_kw: dict[str, Any] = {
         "connect_timeout": 45.0,
@@ -452,29 +443,13 @@ def create_application() -> Application:
         logger.info("Используется TELEGRAM_PROXY для запросов к Telegram API")
     request = HTTPXRequest(**req_kw)
 
-    builder = (
+    app = (
         Application.builder()
         .token(BOT_TOKEN)
         .request(request)
         .post_init(post_init)
+        .build()
     )
-
-    pp = (PERSISTENCE_PATH or "").strip()
-    if pp:
-        builder = builder.persistence(
-            PicklePersistence(
-                filepath=pp,
-                store_data=PersistenceInput(
-                    bot_data=False,
-                    chat_data=False,
-                    user_data=True,
-                    callback_data=False,
-                ),
-            )
-        )
-        logger.info("Включена PicklePersistence: %s", pp)
-
-    app = builder.build()
     app.add_error_handler(error_handler)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))

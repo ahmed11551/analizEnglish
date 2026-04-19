@@ -71,7 +71,7 @@ exit
 sudo systemctl restart english-test-bot
 ```
 
-На VPS **polling** достаточен; webhook — отдельная доработка кода.
+На VPS используется **long polling** (`python bot.py` под systemd).
 
 ### Лиды
 
