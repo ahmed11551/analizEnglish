@@ -1,18 +1,16 @@
 """
-Telegram-бот: тест English Grammar & Usage (B2), анкета, подсчёт уровня и тем для повторения.
-Запуск: set BOT_TOKEN, затем python bot.py
+Telegram-бот: тест English Grammar & Usage (B2), анкета, уровень и темы для повторения.
+Запуск из каталога проекта: python bot.py
 """
 
 from __future__ import annotations
 
 import logging
-import os
 import re
-
-from dotenv import load_dotenv
+import sys
 from typing import Any
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -22,6 +20,7 @@ from telegram.ext import (
     filters,
 )
 
+from config import BOT_TOKEN, BRAND_SUBTITLE, BRAND_TITLE, LOG_LEVEL
 from questions_data import (
     CTA_TEXT,
     INTRO_FIELDS,
@@ -32,10 +31,12 @@ from questions_data import (
 )
 
 logging.basicConfig(
-    format="%(asctime)s %(name)s %(levelname)s %(message)s",
-    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
 )
 logger = logging.getLogger(__name__)
+
+TELEGRAM_TEXT_LIMIT = 4000
 
 
 def score_to_level(score: int) -> tuple[str, str]:
@@ -69,7 +70,60 @@ def format_question_message(q: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def split_telegram_chunks(text: str, max_len: int = TELEGRAM_TEXT_LIMIT) -> list[str]:
+    """Дробит текст по абзацам, чтобы не резать посередине смысла, если возможно."""
+    if len(text) <= max_len:
+        return [text]
+    chunks: list[str] = []
+    buf = ""
+    for para in text.split("\n\n"):
+        candidate = para if not buf else f"{buf}\n\n{para}"
+        if len(candidate) <= max_len:
+            buf = candidate
+            continue
+        if buf:
+            chunks.append(buf)
+            buf = ""
+        if len(para) <= max_len:
+            buf = para
+            continue
+        start = 0
+        while start < len(para):
+            piece = para[start : start + max_len]
+            chunks.append(piece)
+            start += max_len
+    if buf:
+        chunks.append(buf)
+    return chunks
+
+
+async def post_init(application: Application) -> None:
+    await application.bot.set_my_commands(
+        [
+            BotCommand("start", "Начать тест"),
+            BotCommand("help", "Справка и команды"),
+            BotCommand("cancel", "Прервать тест"),
+            BotCommand("skip", "Пропустить шаг с контактом"),
+        ]
+    )
+    me = await application.bot.get_me()
+    logger.info("Бот @%s запущен (id=%s)", me.username, me.id)
+
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.exception("Ошибка при обработке update: %s", context.error)
+    if isinstance(update, Update) and update.effective_message:
+        try:
+            await update.effective_message.reply_text(
+                "Произошла техническая ошибка. Попробуй ещё раз или напиши /start."
+            )
+        except Exception:
+            logger.exception("Не удалось отправить сообщение об ошибке")
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.effective_message:
+        return
     ud = context.user_data
     ud.clear()
     ud["phase"] = "intro"
@@ -77,8 +131,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     ud["intro_answers"] = {}
     ud["answers"] = []
 
+    user = update.effective_user
+    if user:
+        logger.info(
+            "Старт теста: user_id=%s username=%s",
+            user.id,
+            user.username or "",
+        )
+
     title = (
-        "📘 English Grammar & Usage Test (B2)\n\n"
+        f"📘 {BRAND_TITLE}\n"
+        f"{BRAND_SUBTITLE}\n\n"
         "Этот тест покажет твой уровень и какие темы стоит повторить.\n\n"
         "Пару слов о себе перед началом теста:"
     )
@@ -86,9 +149,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.effective_message.reply_text(f"{title}\n\n{prompt}")
 
 
+async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.effective_message:
+        return
+    text = (
+        f"{BRAND_TITLE}\n\n"
+        "• /start — пройти тест с начала (текущий прогресс сбросится)\n"
+        "• /cancel — прервать тест\n"
+        "• /skip — после результатов пропустить отправку контакта менеджерам\n\n"
+        "Вопросы с вариантами a, b, c — нажми кнопку под сообщением."
+    )
+    await update.effective_message.reply_text(text)
+
+
 async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.effective_message:
+        return
     context.user_data.clear()
-    await update.effective_message.reply_text("Тест прерван. Начни снова: /start")
+    await update.effective_message.reply_text(
+        "Тест прерван. Чтобы начать заново, отправь /start."
+    )
 
 
 async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -130,15 +210,31 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
         return
 
+    if phase == "quiz":
+        await update.message.reply_text(
+            "Сейчас нужно выбрать ответ кнопкой a, b или c под вопросом."
+        )
+        return
+
+    await update.message.reply_text(
+        "Чтобы пройти тест, отправь /start."
+    )
+
 
 async def on_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     if not query or not query.data:
         return
-    await query.answer()
     ud = context.user_data
+
     if ud.get("phase") != "quiz":
+        await query.answer(
+            "Сессия сброшена или тест уже завершён. Нажми /start.",
+            show_alert=True,
+        )
         return
+
+    await query.answer()
 
     m = re.match(r"^q:(\d+):([abc])$", query.data)
     if not m:
@@ -147,6 +243,7 @@ async def on_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     chosen = m.group(2)
     q = QUESTIONS[ud.get("q_index", 0)]
     if q["id"] != qid:
+        await query.answer("Это устаревший вопрос. Нажми /start.", show_alert=True)
         return
 
     is_correct = chosen == q["correct"]
@@ -167,18 +264,17 @@ async def on_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         try:
             await query.edit_message_reply_markup(reply_markup=None)
         except Exception:
-            pass
+            logger.debug("Не удалось убрать клавиатуру у сообщения", exc_info=True)
         await query.message.reply_text(
             format_question_message(nq),
             reply_markup=build_question_keyboard(nq["id"]),
         )
         return
 
-    # Finished all questions
     try:
         await query.edit_message_reply_markup(reply_markup=None)
     except Exception:
-        pass
+        logger.debug("Не удалось убрать клавиатуру у сообщения", exc_info=True)
 
     answers = ud.get("answers", [])
     score = sum(1 for a in answers if a["is_correct"])
@@ -207,7 +303,7 @@ async def on_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         f"{LEVEL_TEXTS[level_key]}"
     )
 
-    for chunk in _split_telegram_text(result_text, 4000):
+    for chunk in split_telegram_chunks(result_text):
         await query.message.reply_text(chunk)
 
     cta = (
@@ -218,19 +314,19 @@ async def on_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await query.message.reply_text(cta)
     ud["phase"] = "lead"
 
-
-def _split_telegram_text(s: str, max_len: int) -> list[str]:
-    if len(s) <= max_len:
-        return [s]
-    parts: list[str] = []
-    rest = s
-    while rest:
-        parts.append(rest[:max_len])
-        rest = rest[max_len:]
-    return parts
+    logger.info(
+        "Тест завершён: user_id=%s score=%s/%s level=%s wrong_topics=%s",
+        query.from_user.id if query.from_user else None,
+        score,
+        len(QUESTIONS),
+        level_label,
+        wrong_topics,
+    )
 
 
 async def skip_lead(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.effective_message:
+        return
     ud = context.user_data
     if ud.get("phase") == "lead":
         ud["phase"] = "done"
@@ -238,19 +334,25 @@ async def skip_lead(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 def main() -> None:
-    load_dotenv()
-    token = os.environ.get("BOT_TOKEN")
-    if not token:
-        raise SystemExit("Задайте переменную окружения BOT_TOKEN")
+    if not BOT_TOKEN:
+        logger.error("Не задан BOT_TOKEN. Создай файл .env по образцу .env.example.")
+        sys.exit(1)
 
-    app = Application.builder().token(token).build()
+    app = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .post_init(post_init)
+        .build()
+    )
+    app.add_error_handler(error_handler)
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("cancel", cmd_cancel))
     app.add_handler(CommandHandler("skip", skip_lead))
     app.add_handler(CallbackQueryHandler(on_quiz_answer, pattern=r"^q:\d+:[abc]$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
 
-    logger.info("Бот запущен")
+    logger.info("Polling…")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
