@@ -62,9 +62,9 @@ QUESTIONS = [
         "id": 6,
         "part": None,
         "text": "If I ___ rich, I would travel the world.",
-        "options": {"a": "am", "b": "was", "c": "would be"},
+        "options": {"a": "am", "b": "were", "c": "would be"},
         "topic": "Second Conditional (form focus)",
-        "correct": "c",
+        "correct": "b",
     },
     {
         "id": 7,

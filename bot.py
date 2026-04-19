@@ -11,6 +11,8 @@ import sys
 from typing import Any
 
 from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.constants import ChatAction
+from telegram.error import BadRequest, NetworkError, TimedOut
 from telegram.request import HTTPXRequest
 from telegram.ext import (
     Application,
@@ -22,6 +24,8 @@ from telegram.ext import (
 )
 
 from config import BOT_TOKEN, BRAND_SUBTITLE, BRAND_TITLE, LOG_LEVEL
+from intro_validate import validate_intro_answer
+from leads import append_lead, build_lead_record
 from questions_data import (
     CTA_TEXT,
     INTRO_FIELDS,
@@ -38,6 +42,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TELEGRAM_TEXT_LIMIT = 4000
+
+
+def _session_summary(ud: dict[str, Any]) -> tuple[int, str, list[str]]:
+    answers = ud.get("answers", [])
+    score = sum(1 for a in answers if a["is_correct"])
+    level_label, _ = score_to_level(score)
+    wrong = sorted({a["topic"] for a in answers if not a["is_correct"]})
+    return score, level_label, wrong
 
 
 def score_to_level(score: int) -> tuple[str, str]:
@@ -68,6 +80,8 @@ def format_question_message(q: dict[str, Any]) -> str:
     lines.append(f"c) {opts['c']}")
     lines.append("")
     lines.append(f"Тема: {q['topic']}")
+    lines.append("")
+    lines.append(f"Вопрос {q['id']} из {len(QUESTIONS)}")
     return "\n".join(lines)
 
 
@@ -112,7 +126,16 @@ async def post_init(application: Application) -> None:
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.exception("Ошибка при обработке update: %s", context.error)
+    err = context.error
+    if isinstance(err, (TimedOut, NetworkError)):
+        logger.warning("Сеть Telegram: %s", err)
+        return
+    if isinstance(err, BadRequest):
+        msg = str(err).lower()
+        if "query is too old" in msg or "message is not modified" in msg:
+            logger.info("BadRequest (ожидаемо): %s", err)
+            return
+    logger.exception("Ошибка при обработке update: %s", err)
     if isinstance(update, Update) and update.effective_message:
         try:
             await update.effective_message.reply_text(
@@ -158,7 +181,8 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• /start — пройти тест с начала (текущий прогресс сбросится)\n"
         "• /cancel — прервать тест\n"
         "• /skip — после результатов пропустить отправку контакта менеджерам\n\n"
-        "Вопросы с вариантами a, b, c — нажми кнопку под сообщением."
+        "В анкете — короткие ответы; возраст одним числом (например 22). "
+        "Вопросы теста — кнопки a, b, c под сообщением."
     )
     await update.effective_message.reply_text(text)
 
@@ -182,7 +206,11 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if phase == "intro":
         step = ud.get("intro_step", 0)
         key, _ = INTRO_FIELDS[step]
-        ud["intro_answers"][key] = text
+        ok, err_msg = validate_intro_answer(key, text)
+        if not ok:
+            await update.message.reply_text(err_msg)
+            return
+        ud["intro_answers"][key] = text.strip()
         step += 1
         ud["intro_step"] = step
         if step < len(INTRO_FIELDS):
@@ -204,6 +232,24 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text(
             "Спасибо! Менеджер свяжется с тобой в Telegram.",
         )
+        u = update.effective_user
+        score, level_label, wrong = _session_summary(ud)
+        try:
+            append_lead(
+                build_lead_record(
+                    user_id=u.id if u else None,
+                    username=u.username if u else None,
+                    first_name=u.first_name if u else None,
+                    contact=text.strip(),
+                    skipped=False,
+                    intro=dict(ud.get("intro_answers", {})),
+                    score=score,
+                    level_label=level_label,
+                    wrong_topics=wrong,
+                )
+            )
+        except OSError:
+            logger.exception("Не удалось записать лид в файл")
         logger.info(
             "Lead: user_id=%s contact=%s",
             update.effective_user.id if update.effective_user else None,
@@ -222,7 +268,9 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
-async def on_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def on_quiz_answer(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     query = update.callback_query
     if not query or not query.data:
         return
@@ -309,6 +357,14 @@ async def on_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         f"{LEVEL_TEXTS[level_key]}"
     )
 
+    try:
+        await context.bot.send_chat_action(
+            chat_id=query.message.chat_id,
+            action=ChatAction.TYPING,
+        )
+    except Exception:
+        logger.debug("send_chat_action failed", exc_info=True)
+
     for chunk in split_telegram_chunks(result_text):
         await query.message.reply_text(chunk)
 
@@ -337,6 +393,28 @@ async def skip_lead(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if ud.get("phase") == "lead":
         ud["phase"] = "done"
         await update.effective_message.reply_text("Хорошо, без контакта.")
+        u = update.effective_user
+        score, level_label, wrong = _session_summary(ud)
+        try:
+            append_lead(
+                build_lead_record(
+                    user_id=u.id if u else None,
+                    username=u.username if u else None,
+                    first_name=u.first_name if u else None,
+                    contact=None,
+                    skipped=True,
+                    intro=dict(ud.get("intro_answers", {})),
+                    score=score,
+                    level_label=level_label,
+                    wrong_topics=wrong,
+                )
+            )
+        except OSError:
+            logger.exception("Не удалось записать лид (skip) в файл")
+        logger.info(
+            "Lead skipped: user_id=%s",
+            u.id if u else None,
+        )
     else:
         await update.effective_message.reply_text(
             "/skip доступна после результатов, когда бот просит оставить контакт."

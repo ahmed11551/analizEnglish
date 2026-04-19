@@ -7,8 +7,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+_ROOT = Path(__file__).resolve().parent
+
 # Явный путь к .env рядом с проектом (не зависит от текущей папки в консоли)
-_ENV_PATH = Path(__file__).resolve().parent / ".env"
+_ENV_PATH = _ROOT / ".env"
 load_dotenv(dotenv_path=_ENV_PATH)
 
 
@@ -27,3 +29,7 @@ BRAND_SUBTITLE = _env(
 )
 
 LOG_LEVEL = _env("LOG_LEVEL", "INFO").upper()
+
+# Куда писать лиды (JSON Lines). Каталог создаётся автоматически.
+_leads_override = _env("LEADS_FILE")
+LEADS_PATH = Path(_leads_override) if _leads_override else _ROOT / "data" / "leads.jsonl"
