@@ -20,10 +20,19 @@ from telegram.ext import (
     CommandHandler,
     ContextTypes,
     MessageHandler,
+    PersistenceInput,
+    PicklePersistence,
     filters,
 )
 
-from config import BOT_TOKEN, BRAND_SUBTITLE, BRAND_TITLE, LOG_LEVEL, TELEGRAM_PROXY
+from config import (
+    BOT_TOKEN,
+    BRAND_SUBTITLE,
+    BRAND_TITLE,
+    LOG_LEVEL,
+    PERSISTENCE_PATH,
+    TELEGRAM_PROXY,
+)
 from intro_validate import validate_intro_answer
 from leads import append_lead, build_lead_record
 from questions_data import (
@@ -421,10 +430,12 @@ async def skip_lead(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
 
-def main() -> None:
+def create_application() -> Application:
+    """Сборка Application для polling (локально) и для webhook (Vercel)."""
     if not BOT_TOKEN:
-        logger.error("Не задан BOT_TOKEN. Создай файл .env по образцу .env.example.")
-        sys.exit(1)
+        raise RuntimeError(
+            "Не задан BOT_TOKEN. Для локального запуска создай .env; для Vercel задай переменную в панели."
+        )
 
     req_kw: dict[str, Any] = {
         "connect_timeout": 45.0,
@@ -436,13 +447,30 @@ def main() -> None:
         req_kw["proxy"] = TELEGRAM_PROXY
         logger.info("Используется TELEGRAM_PROXY для запросов к Telegram API")
     request = HTTPXRequest(**req_kw)
-    app = (
+
+    builder = (
         Application.builder()
         .token(BOT_TOKEN)
         .request(request)
         .post_init(post_init)
-        .build()
     )
+
+    pp = (PERSISTENCE_PATH or "").strip()
+    if pp:
+        builder = builder.persistence(
+            PicklePersistence(
+                filepath=pp,
+                store_data=PersistenceInput(
+                    bot_data=False,
+                    chat_data=False,
+                    user_data=True,
+                    callback_data=False,
+                ),
+            )
+        )
+        logger.info("Включена PicklePersistence: %s", pp)
+
+    app = builder.build()
     app.add_error_handler(error_handler)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
@@ -450,6 +478,15 @@ def main() -> None:
     app.add_handler(CommandHandler("skip", skip_lead))
     app.add_handler(CallbackQueryHandler(on_quiz_answer, pattern=r"^q:\d+:[abc]$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
+    return app
+
+
+def main() -> None:
+    try:
+        app = create_application()
+    except RuntimeError as e:
+        logger.error("%s", e)
+        sys.exit(1)
 
     logger.info("Polling… (при обрыве сети бот будет повторять подключение)")
     app.run_polling(

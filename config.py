@@ -38,3 +38,10 @@ LEADS_PATH = Path(_leads_override) if _leads_override else _ROOT / "data" / "lea
 # Примеры: http://127.0.0.1:7890  socks5://127.0.0.1:1080
 # Для socks5: pip install "python-telegram-bot[socks]"
 TELEGRAM_PROXY = _env("TELEGRAM_PROXY")
+
+# Webhook (Vercel): секрет из setWebhook; проверяется заголовком X-Telegram-Bot-Api-Secret-Token
+WEBHOOK_SECRET = _env("WEBHOOK_SECRET")
+WEBHOOK_URL = _env("WEBHOOK_URL")
+
+# Файл состояния user_data (Pickle). На Vercel задай /tmp/ptb.pkl в переменных окружения.
+PERSISTENCE_PATH = _env("PERSISTENCE_PATH")
