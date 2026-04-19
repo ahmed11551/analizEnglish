@@ -12,7 +12,9 @@
 
 ### 1. Репозиторий на GitHub
 
-Проект уже заточен под корень репозитория (`bot.py`, `api/webhook.py`, `requirements.txt`).
+Проект уже заточен под корень репозитория (`bot.py`, `api/webhook/index.py`, `requirements.txt`).
+
+**Импорт в Vercel:** в шаге выбора фреймворка лучше указать **Other** (не только «Python»), чтобы корректно подхватились serverless-файлы в каталоге `api/`. Если сборка ругалась на `vercel.json` → `functions`, в репозитории используется glob `api/**/*.py` и вложенный `api/webhook/index.py` под маршрут `/api/webhook`.
 
 ### 2. Проект в Vercel
 

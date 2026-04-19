@@ -1,6 +1,6 @@
 """
 Vercel Serverless: приём webhook от Telegram (POST JSON = Update).
-Путь: /api/webhook
+Маршрут: /api/webhook (файл api/webhook/index.py — так Vercel стабильно находит функцию).
 """
 
 from __future__ import annotations
