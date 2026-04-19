@@ -7,7 +7,16 @@
 - Токен бота **никогда** не публикуй в чатах, скриншотах и репозитории.
 - Если токен мог утечь: [@BotFather](https://t.me/BotFather) → твой бот → **Revoke current token** → выпусти новый и положи только в локальный `.env`.
 
-## Запуск локально
+## Быстрый запуск (Windows)
+
+1. Один раз заполни `.env`: строка `BOT_TOKEN=…` от [@BotFather](https://t.me/BotFather), сохрани файл.
+2. Дважды щёлкни **`run_bot.bat`**  
+   Или в PowerShell: `.\run_bot.ps1`  
+   Скрипт сам создаст `.venv`, поставит зависимости и запустит `bot.py`.
+
+В **Cursor / VS Code**: `Terminal` → `Run Task…` → **Run Telegram bot**.
+
+## Запуск вручную
 
 ```bash
 cd analiz
