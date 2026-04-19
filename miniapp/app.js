@@ -171,9 +171,10 @@ const WEBSITE_URL = "https://desharschool.ru";
 const CTA_TEXT =
   "Если ты хочешь повысить свой уровень и научиться говорить по-английски. " +
   "Я могу в этом помочь. Переходи на сайт и оставь заявку. Первый урок бесплатный.";
-const appRoot = document.getElementById("quiz-card");
+const appRoot = document.getElementById("app-root");
 const heroTitle = document.getElementById("hero-title");
 const heroSubtitle = document.getElementById("hero-subtitle");
+const startTemplate = document.getElementById("start-template");
 const questionTemplate = document.getElementById("question-template");
 const resultTemplate = document.getElementById("result-template");
 
@@ -218,30 +219,15 @@ function getStageTone(level) {
 
 function renderStart() {
   state.stage = "start";
-  heroTitle.textContent = "Тест уровня английской грамматики";
-  heroSubtitle.textContent =
-    "Современный mini app формат: быстрый старт, понятный результат и чёткий план повторения.";
-
-  appRoot.innerHTML = `
-    <section class="card start-card">
-      <span class="tagline">Blue Edition · 2026</span>
-      <h2>Готов проверить свой текущий уровень?</h2>
-      <p class="description">
-        Тест состоит из 21 вопроса. В конце ты получишь:
-      </p>
-      <ul class="feature-list">
-        <li>текущий уровень по шкале теста;</li>
-        <li>темы, где были ошибки;</li>
-        <li>конкретный список тем для повторения;</li>
-        <li>доступ к сайту для записи на бесплатный первый урок.</li>
-      </ul>
-      <button id="start-btn" class="primary-btn" type="button">Начать тест</button>
-    </section>
-  `;
-  document.getElementById("start-btn").addEventListener("click", () => {
+  
+  const node = startTemplate.content.cloneNode(true);
+  
+  node.getElementById("start-btn").addEventListener("click", () => {
     state.stage = "quiz";
     renderQuiz();
   });
+  
+  appRoot.replaceChildren(node);
 }
 
 function renderResult() {
@@ -258,7 +244,6 @@ function renderResult() {
   node.getElementById("score-line").textContent = `Правильных ответов: ${score} из ${QUESTIONS.length}`;
   node.getElementById("level-line").textContent = `Твой уровень: ${level}`;
   node.getElementById("level-text").textContent = LEVEL_TEXTS[level];
-  node.getElementById("tone-line").textContent = stageTone;
   node.getElementById("cta-text").textContent = CTA_TEXT;
 
   const mistakesList = node.getElementById("mistakes-list");
@@ -278,8 +263,8 @@ function renderResult() {
     }
   }
 
-  const ctaBtn = node.querySelector(".site-button");
-  ctaBtn.href = WEBSITE_URL;
+  const siteLink = node.getElementById("site-link");
+  siteLink.href = WEBSITE_URL;
 
   node.getElementById("restart-btn").addEventListener("click", resetQuiz);
   appRoot.replaceChildren(node);
