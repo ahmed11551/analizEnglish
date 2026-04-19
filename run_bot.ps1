@@ -13,7 +13,7 @@ Set-Location $Root
 $envFile = Join-Path $Root ".env"
 if (-not (Test-Path $envFile)) {
     Copy-Item (Join-Path $Root ".env.example") $envFile -Force
-    Write-Host "Created .env — add BOT_TOKEN from @BotFather, save, run again." -ForegroundColor Yellow
+    Write-Host 'Created .env — add BOT_TOKEN from BotFather, save, run again.' -ForegroundColor Yellow
     exit 1
 }
 
@@ -35,10 +35,10 @@ if (-not (Test-Path $venvPy)) {
 Write-Host "Installing dependencies ..."
 & $venvPip install -q --disable-pip-version-check -r (Join-Path $Root "requirements.txt")
 
-& $venvPy -c "from pathlib import Path; from dotenv import load_dotenv; import os, sys; load_dotenv(Path('.env')); t=(os.getenv('BOT_TOKEN') or '').strip(); sys.exit(0 if len(t)>20 else 1)"
+& $venvPy (Join-Path $Root "check_token.py")
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "BOT_TOKEN missing or too short in .env — put token on same line as BOT_TOKEN=" -ForegroundColor Yellow
+    Write-Host 'BOT_TOKEN missing or too short in .env (same line as BOT_TOKEN=).' -ForegroundColor Yellow
     exit 1
 }
 
