@@ -1,5 +1,5 @@
 """
-Telegram-бот: тест English Grammar & Usage (B2), анкета, уровень и темы для повторения.
+Telegram-бот: тест English Grammar & Usage (B2), уровень и темы для повторения.
 Запуск из каталога проекта: python bot.py
 """
 
@@ -30,12 +30,9 @@ from config import (
     LOG_LEVEL,
     TELEGRAM_PROXY,
 )
-from intro_validate import validate_intro_answer
 from leads import append_lead, build_lead_record
 from questions_data import (
     CTA_TEXT,
-    INTRO_FIELDS,
-    INTRO_LABELS_RU,
     LEVEL_BANDS,
     LEVEL_TEXTS,
     QUESTIONS,
@@ -76,16 +73,11 @@ def build_question_keyboard(qid: int) -> InlineKeyboardMarkup:
 
 def format_question_message(q: dict[str, Any]) -> str:
     lines: list[str] = []
-    if q.get("part"):
-        lines.append(q["part"])
-        lines.append("")
     lines.append(f"{q['id']}. {q['text']}")
     opts = q["options"]
     lines.append(f"a) {opts['a']}")
     lines.append(f"b) {opts['b']}")
     lines.append(f"c) {opts['c']}")
-    lines.append("")
-    lines.append(f"Тема: {q['topic']}")
     lines.append("")
     lines.append(f"Вопрос {q['id']} из {len(QUESTIONS)}")
     return "\n".join(lines)
@@ -156,9 +148,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     ud = context.user_data
     ud.clear()
-    ud["phase"] = "intro"
-    ud["intro_step"] = 0
-    ud["intro_answers"] = {}
+    ud["phase"] = "quiz"
+    ud["q_index"] = 0
     ud["answers"] = []
 
     user = update.effective_user
@@ -172,11 +163,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     title = (
         f"📘 {BRAND_TITLE}\n"
         f"{BRAND_SUBTITLE}\n\n"
-        "Этот тест покажет твой уровень и какие темы стоит повторить.\n\n"
-        "Пару слов о себе перед началом теста:"
+        "Этот тест покажет твой уровень и какие темы стоит повторить."
     )
-    _, prompt = INTRO_FIELDS[0]
-    await update.effective_message.reply_text(f"{title}\n\n{prompt}")
+    q = QUESTIONS[0]
+    await update.effective_message.reply_text(title)
+    await update.effective_message.reply_text(
+        format_question_message(q),
+        reply_markup=build_question_keyboard(q["id"]),
+    )
 
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -187,7 +181,6 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• /start — пройти тест с начала (текущий прогресс сбросится)\n"
         "• /cancel — прервать тест\n"
         "• /skip — после результатов пропустить отправку контакта менеджерам\n\n"
-        "В анкете — короткие ответы; возраст одним числом (например 22). "
         "Вопросы теста — кнопки a, b, c под сообщением."
     )
     await update.effective_message.reply_text(text)
@@ -209,29 +202,6 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     phase = ud.get("phase")
     text = update.message.text.strip()
 
-    if phase == "intro":
-        step = ud.get("intro_step", 0)
-        key, _ = INTRO_FIELDS[step]
-        ok, err_msg = validate_intro_answer(key, text)
-        if not ok:
-            await update.message.reply_text(err_msg)
-            return
-        ud["intro_answers"][key] = text.strip()
-        step += 1
-        ud["intro_step"] = step
-        if step < len(INTRO_FIELDS):
-            _, prompt = INTRO_FIELDS[step]
-            await update.message.reply_text(prompt)
-            return
-        ud["phase"] = "quiz"
-        ud["q_index"] = 0
-        q = QUESTIONS[0]
-        await update.message.reply_text(
-            format_question_message(q),
-            reply_markup=build_question_keyboard(q["id"]),
-        )
-        return
-
     if phase == "lead":
         ud["lead_contact"] = text
         ud["phase"] = "done"
@@ -248,7 +218,7 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     first_name=u.first_name if u else None,
                     contact=text.strip(),
                     skipped=False,
-                    intro=dict(ud.get("intro_answers", {})),
+                    intro={},
                     score=score,
                     level_label=level_label,
                     wrong_topics=wrong,
@@ -340,7 +310,6 @@ async def on_quiz_answer(
     score = sum(1 for a in answers if a["is_correct"])
     level_label, level_key = score_to_level(score)
     wrong_topics = sorted({a["topic"] for a in answers if not a["is_correct"]})
-    intro = ud.get("intro_answers", {})
 
     if wrong_topics:
         wrong_block = "Темы для повторения (по ошибкам):\n" + "\n".join(
@@ -349,17 +318,11 @@ async def on_quiz_answer(
     else:
         wrong_block = "Темы для повторения по ошибкам: нечего — все ответы верные."
 
-    intro_lines = "\n".join(
-        f"• {INTRO_LABELS_RU.get(k, k)}: {v}" for k, v in intro.items()
-    )
-
     result_text = (
         "📊 Результаты теста\n\n"
         f"Правильных ответов: {score} из {len(QUESTIONS)}\n"
         f"Уровень по шкале теста: {level_label}\n\n"
         f"{wrong_block}\n\n"
-        "Твои ответы в начале:\n"
-        f"{intro_lines}\n\n"
         f"{LEVEL_TEXTS[level_key]}"
     )
 
@@ -409,7 +372,7 @@ async def skip_lead(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     first_name=u.first_name if u else None,
                     contact=None,
                     skipped=True,
-                    intro=dict(ud.get("intro_answers", {})),
+                    intro={},
                     score=score,
                     level_label=level_label,
                     wrong_topics=wrong,
