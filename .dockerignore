@@ -1,0 +1,14 @@
+.git
+.venv
+venv
+__pycache__
+*.py[cod]
+.env
+data
+*.md
+deploy
+.vscode
+run_bot.ps1
+run_bot.bat
+check_token.py
+check_telegram.py

@@ -1,0 +1,13 @@
+# Запуск: скопируй .env.example → .env, заполни BOT_TOKEN, при блокировке сети — TELEGRAM_PROXY.
+# docker compose up --build
+#
+# Остановка: Ctrl+C или docker compose down
+
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data

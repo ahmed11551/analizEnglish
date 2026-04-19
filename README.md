@@ -20,6 +20,16 @@
 
 Создай `.venv`, `pip install -r requirements.txt`, заполни `.env`, затем `python bot.py` из корня проекта.
 
+## Docker
+
+Нужны [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows) и файл **`.env`** в корне проекта (`BOT_TOKEN`, при необходимости `TELEGRAM_PROXY` и др.).
+
+```bash
+docker compose up --build
+```
+
+Лиды пишутся в **`./data`** на хосте (том в `docker-compose.yml`). Сеть до `api.telegram.org` идёт **из контейнера** так же, как с ПК: если без VPN не работает, в `.env` укажи `TELEGRAM_PROXY` или включи VPN на хосте.
+
 Команды меню в Telegram задаются при старте бота автоматически.
 
 ## Переменные окружения
