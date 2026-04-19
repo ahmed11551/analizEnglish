@@ -33,7 +33,7 @@
 | `LEADS_FILE` | нет | Путь к файлу лидов; по умолчанию `data/leads.jsonl` |
 | `TELEGRAM_PROXY` | нет | Прокси для Bot API, например `http://127.0.0.1:7890` или `socks5://127.0.0.1:1080` |
 | `WEBHOOK_URL` | нет | Только для `set_webhook.py` (полный URL `/api/webhook` на Vercel) |
-| `WEBHOOK_SECRET` | нет | Общий секрет Vercel + `setWebhook`; проверяется в `api/webhook/index.py` |
+| `WEBHOOK_SECRET` | нет | Общий секрет Vercel + `setWebhook`; проверяется в `api/webhook.py` |
 | `PERSISTENCE_PATH` | нет | Для Vercel: `/tmp/ptb.pkl` (см. VERCEL.md) |
 
 После теста контакты и отказ от контакта (`/skip`) дописываются в **`data/leads.jsonl`** (каталог в `.gitignore`). На сервере делай бэкап и ограничивай доступ к файлу.
@@ -64,7 +64,7 @@
 - `intro_validate.py` — проверка ответов анкеты
 - `leads.py` — запись лидов в JSON Lines
 - `check_telegram.py` — проверка доступа до `api.telegram.org`
-- `api/webhook/index.py` — endpoint для Vercel (Telegram webhook, URL `/api/webhook`)
+- `api/webhook.py` — endpoint для Vercel (Telegram webhook, URL `/api/webhook`)
 - `set_webhook.py` — регистрация webhook у Telegram
 - `get_webhook_info.py` — диагностика: URL webhook и `last_error_message` у Telegram
 - `deploy/` — VPS, Vercel

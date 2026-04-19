@@ -1,6 +1,6 @@
 """
 Vercel Serverless: приём webhook от Telegram (POST JSON = Update).
-Маршрут: /api/webhook (файл api/webhook/index.py — так Vercel стабильно находит функцию).
+Маршрут: /api/webhook (один файл api/webhook.py — стандартный путь для Vercel).
 """
 
 from __future__ import annotations
@@ -38,7 +38,6 @@ async def _process_body(body: bytes) -> None:
         data = json.loads(body.decode("utf-8"))
         upd = Update.de_json(data, app.bot)
         await app.process_update(upd)
-        # Неблокирующие handler'ы ставят задачи в create_task — даём им завершиться до stop().
         await asyncio.sleep(2.5)
     finally:
         await app.stop()

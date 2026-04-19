@@ -12,9 +12,11 @@
 
 ### 1. Репозиторий на GitHub
 
-Проект уже заточен под корень репозитория (`bot.py`, `api/webhook/index.py`, `requirements.txt`).
+Проект уже заточен под корень репозитория (`bot.py`, `api/webhook.py`, `requirements.txt`, каталог `public/`).
 
-**Импорт в Vercel:** в шаге выбора фреймворка лучше указать **Other** (не только «Python»), чтобы корректно подхватились serverless-файлы в каталоге `api/`. Если сборка ругалась на `vercel.json` → `functions`, в репозитории используется glob `api/**/*.py` и вложенный `api/webhook/index.py` под маршрут `/api/webhook`.
+**Импорт в Vercel:** в шаге выбора фреймворка укажи **Other**. Отдельного `vercel.json` с блоком `functions` нет: если Vercel **не видит** ни одной Python-функции в `api/`, любой шаблон в `functions` даёт ошибку «не соответствует…». Функция — один файл **`api/webhook.py`** (маршрут `/api/webhook`). Лимит времени функции задаётся в панели: **Settings → Functions → Default Max Duration** (на Hobby по умолчанию уже несколько минут).
+
+В **Settings → General** убери кастомный **Output Directory**, если когда-то ставился — он может сломать zero-config для `api/*.py`.
 
 ### 2. Проект в Vercel
 
@@ -60,7 +62,7 @@ python set_webhook.py
 1. **Точный URL** возьми в Vercel → **Deployments** → открой последний успешный деплой → домен (Production). Именно его, с суффиксом `/api/webhook`, указывай в `WEBHOOK_URL` и в `setWebhook`.
 2. **`WEBHOOK_SECRET`**: значение в панели Vercel и в `secret_token` при `setWebhook` должны **совпадать побайтово**. Если в Vercel задан секрет, а webhook регистрировали без `secret_token` — Telegram не шлёт заголовок `X-Telegram-Bot-Api-Secret-Token`, и функция ответит **403** (бот не получит апдейт).
 3. На ПК с доступом к Telegram API: `python get_webhook_info.py` — смотри поле **`url`**, **`last_error_message`** (часто там SSL/404/таймаут до Vercel) и **`pending_update_count`**.
-4. Убедись, что задеплоен **последний `main`** с GitHub (исправлены `vercel.json` и путь `api/webhook/index.py`).
+4. Убедись, что задеплоен **последний `main`** с GitHub (`api/webhook.py`, без конфликтующего `vercel.json` → `functions`).
 
 ### 4. Снять webhook (вернуться на polling локально)
 
