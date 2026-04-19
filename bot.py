@@ -10,7 +10,7 @@ import re
 import sys
 from typing import Any
 
-from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
 from telegram.constants import ChatAction
 from telegram.error import BadRequest, NetworkError, TimedOut
 from telegram.request import HTTPXRequest
@@ -28,7 +28,9 @@ from config import (
     BRAND_SUBTITLE,
     BRAND_TITLE,
     LOG_LEVEL,
+    MINI_APP_URL,
     TELEGRAM_PROXY,
+    WEBSITE_URL,
 )
 from leads import append_lead, build_lead_record
 from questions_data import (
@@ -69,6 +71,17 @@ def build_question_keyboard(qid: int) -> InlineKeyboardMarkup:
         InlineKeyboardButton("c", callback_data=f"q:{qid}:c"),
     ]
     return InlineKeyboardMarkup([row])
+
+
+def build_cta_keyboard() -> InlineKeyboardMarkup:
+    buttons = [
+        [InlineKeyboardButton("Перейти на сайт", url=WEBSITE_URL)],
+    ]
+    if MINI_APP_URL:
+        buttons.append(
+            [InlineKeyboardButton("Открыть мини-приложение", web_app=WebAppInfo(url=MINI_APP_URL))]
+        )
+    return InlineKeyboardMarkup(buttons)
 
 
 def format_question_message(q: dict[str, Any]) -> str:
@@ -114,6 +127,7 @@ async def post_init(application: Application) -> None:
     await application.bot.set_my_commands(
         [
             BotCommand("start", "Начать тест"),
+            BotCommand("miniapp", "Открыть мини-приложение"),
             BotCommand("help", "Справка и команды"),
             BotCommand("cancel", "Прервать тест"),
             BotCommand("skip", "Пропустить шаг с контактом"),
@@ -179,11 +193,42 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = (
         f"{BRAND_TITLE}\n\n"
         "• /start — пройти тест с начала (текущий прогресс сбросится)\n"
+        "• /miniapp — открыть mini app с тестом (web/mobile)\n"
         "• /cancel — прервать тест\n"
         "• /skip — после результатов пропустить отправку контакта менеджерам\n\n"
-        "Вопросы теста — кнопки a, b, c под сообщением."
+        "Если чат Telegram работает нестабильно, пройди тест в mini app."
     )
     await update.effective_message.reply_text(text)
+
+
+async def open_miniapp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.effective_message:
+        return
+    if MINI_APP_URL:
+        keyboard = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "Открыть мини-приложение",
+                        web_app=WebAppInfo(url=MINI_APP_URL),
+                    )
+                ],
+                [InlineKeyboardButton("Перейти на сайт", url=WEBSITE_URL)],
+            ]
+        )
+        await update.effective_message.reply_text(
+            "Мини-приложение готово. Пройди тест в удобном формате (web/mobile).",
+            reply_markup=keyboard,
+        )
+        return
+
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("Перейти на сайт", url=WEBSITE_URL)]]
+    )
+    await update.effective_message.reply_text(
+        "Ссылка на mini app ещё не настроена. Пока можешь пройти тест на сайте.",
+        reply_markup=keyboard,
+    )
 
 
 async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -312,17 +357,18 @@ async def on_quiz_answer(
     wrong_topics = sorted({a["topic"] for a in answers if not a["is_correct"]})
 
     if wrong_topics:
-        wrong_block = "Темы для повторения (по ошибкам):\n" + "\n".join(
-            f"• {t}" for t in wrong_topics
-        )
+        mistakes_block = "Темы, где были ошибки:\n" + "\n".join(f"• {t}" for t in wrong_topics)
+        revise_block = "Какие темы повторить:\n" + "\n".join(f"• {t}" for t in wrong_topics)
     else:
-        wrong_block = "Темы для повторения по ошибкам: нечего — все ответы верные."
+        mistakes_block = "Темы, где были ошибки:\n• Ошибок нет — отличный результат."
+        revise_block = "Какие темы повторить:\n• Можно переходить к более сложным темам (B2+/C1)."
 
     result_text = (
         "📊 Результаты теста\n\n"
         f"Правильных ответов: {score} из {len(QUESTIONS)}\n"
-        f"Уровень по шкале теста: {level_label}\n\n"
-        f"{wrong_block}\n\n"
+        f"Твой уровень: {level_label}\n\n"
+        f"{mistakes_block}\n\n"
+        f"{revise_block}\n\n"
         f"{LEVEL_TEXTS[level_key]}"
     )
 
@@ -337,12 +383,11 @@ async def on_quiz_answer(
     for chunk in split_telegram_chunks(result_text):
         await query.message.reply_text(chunk)
 
-    cta = (
-        f"{CTA_TEXT}\n\n"
-        "Напиши одним сообщением свой @username в Telegram (или номер), "
-        "если хочешь, чтобы с тобой связались. Или отправь /skip."
+    await query.message.reply_text(CTA_TEXT, reply_markup=build_cta_keyboard())
+    await query.message.reply_text(
+        "Если хочешь, чтобы с тобой связались, напиши одним сообщением свой "
+        "@username в Telegram (или номер). Или отправь /skip."
     )
-    await query.message.reply_text(cta)
     ud["phase"] = "lead"
 
     logger.info(
@@ -415,6 +460,7 @@ def create_application() -> Application:
     )
     app.add_error_handler(error_handler)
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("miniapp", open_miniapp))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("cancel", cmd_cancel))
     app.add_handler(CommandHandler("skip", skip_lead))
